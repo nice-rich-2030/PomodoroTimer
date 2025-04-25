@@ -574,7 +574,7 @@ All rights reserved.
                 </svg>
                 <div class="time-display">25:00</div>
             </div>
-            <div class="status">🔥作業中</div>
+            <div class="status">作業</div>
             <div class="controls">
                 <button class="btn btn-primary" id="start-btn">▶️スタート</button>
                 <button class="btn btn-secondary" id="pause-btn" disabled>⏸️ポーズ</button>
@@ -796,12 +796,13 @@ All rights reserved.
                     clearInterval(timer.interval);
                     timer.isRunning = false;
                     //notificationSound.play();
-                    
+                    // 通知を表示
+                    notifyTimerEnd();                    
                     if (timer.mode === 'work') {
                         // 作業モードが終了した場合
                         timer.mode = 'break';
                         timer.currentTime = timer.breakTime;
-                        statusDisplay.textContent = '☕休憩中';
+                        statusDisplay.textContent = '休憩';
                         statusDisplay.style.color = 'var(--secondary-color)';
                         circleProgress.style.stroke = 'var(--secondary-color)';
                         timer.pomodoroCount++;
@@ -818,7 +819,7 @@ All rights reserved.
                         // 休憩モードが終了した場合
                         timer.mode = 'work';
                         timer.currentTime = timer.workTime;
-                        statusDisplay.textContent = '🔥作業中';
+                        statusDisplay.textContent = '作業';
                         statusDisplay.style.color = 'var(--primary-color)';
                         circleProgress.style.stroke = 'var(--primary-color)';
                     }
@@ -855,6 +856,11 @@ All rights reserved.
                     timer.interval = setInterval(updateTimer, 1000);
                     startBtn.disabled = true;
                     pauseBtn.disabled = false;
+                    if (timer.mode === 'work') {
+                        statusDisplay.textContent = '🔥作業中';
+                    }else{
+                        statusDisplay.textContent = '☕休憩中';
+                    }
                 }
             }
 
@@ -865,6 +871,11 @@ All rights reserved.
                     clearInterval(timer.interval);
                     startBtn.disabled = false;
                     pauseBtn.disabled = true;
+                    if (timer.mode === 'work') {
+                        statusDisplay.textContent = '停止中(作業)';
+                    }else{
+                        statusDisplay.textContent = '停止中(休憩)';
+                    }
                 }
             }
 
@@ -874,7 +885,7 @@ All rights reserved.
                 timer.mode = 'work';
                 timer.currentTime = timer.workTime;
                 timeDisplay.textContent = formatTime(timer.currentTime);
-                statusDisplay.textContent = '🔥作業中';
+                statusDisplay.textContent = '作業';
                 statusDisplay.style.color = 'var(--primary-color)';
                 circleProgress.style.stroke = 'var(--primary-color)';
                 
@@ -1267,7 +1278,86 @@ All rights reserved.
                 renderTasks();
                 drawWeeklyChart();
             }
+            // タイマー終了時に呼び出す通知関数
+            function notifyTimerEnd() {
+                // 既存の音声通知
+                //notificationSound.play();
+                
+                // デスクトップ通知を表示
+                showNotification();
+                
+                // 画面をフラッシュさせる視覚的通知
+                flashScreen();
+            }
 
+            // デスクトップ通知機能
+            function showNotification() {
+                // 通知の権限をチェック
+                if (Notification.permission === "granted") {
+                    // 通知を作成して表示
+                    const notification = new Notification("FlowState", {
+                        body: timer.mode === 'work' ? 
+                            "作業時間が終了しました！休憩しましょう" : 
+                            "休憩時間が終了しました！次の作業を始めましょう",
+                        icon: "/favicon.ico", // アプリのアイコン（適宜変更）
+                        requireInteraction: true // ユーザーが操作するまで通知を消さない（Windows通知に効果的）
+                    });
+                    
+                    // 通知をクリックしたときの処理
+                    notification.onclick = function() {
+                        window.focus(); // アプリケーションウィンドウにフォーカス
+                        notification.close();
+                    };
+                } else if (Notification.permission !== "denied") {
+                    // 通知の許可を求める
+                    Notification.requestPermission().then(permission => {
+                        if (permission === "granted") {
+                            showNotification();
+                        }
+                    });
+                }
+            }
+
+            // 画面フラッシュエフェクト
+            function flashScreen() {
+                // フラッシュ用のオーバーレイ要素を作成
+                const overlay = document.createElement('div');
+                overlay.id = 'flash-overlay';
+                
+                // スタイル設定
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = timer.mode === 'work' ? 
+                    'rgba(255, 99, 71, 0.6)' : // 作業→休憩時は赤系
+                    'rgba(76, 175, 80, 0.6)';  // 休憩→作業時は緑系
+                overlay.style.zIndex = '9999';
+                overlay.style.pointerEvents = 'none'; // クリックイベントを下の要素に通す
+                
+                // アニメーション用のスタイル要素を作成
+                const styleElement = document.createElement('style');
+                styleElement.textContent = `
+                    @keyframes flash-animation {
+                        0%, 100% { opacity: 0; }
+                        25%, 75% { opacity: 1; }
+                    }
+                    #flash-overlay {
+                        animation: flash-animation 1.2s ease-in-out 2;
+                    }
+                `;
+                
+                // 要素をDOMに追加
+                document.head.appendChild(styleElement);
+                document.body.appendChild(overlay);
+                
+                // アニメーション終了後に要素を削除する
+                overlay.addEventListener('animationend', () => {
+                    document.body.removeChild(overlay);
+                    document.head.removeChild(styleElement);
+                });
+            }
             // 初期化実行
             init();
         });
