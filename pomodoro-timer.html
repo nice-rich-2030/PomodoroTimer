@@ -696,6 +696,36 @@ All rights reserved.
             // Tasks
             let tasks = [];
             let hideCompleted = false;
+            
+            // グローバルスコープでインターバルIDを保持する変数
+			let dateCheckIntervalId = null;
+
+			// タイマー更新時に日付チェックを行う関数を追加
+			function checkDateChange() {
+			    const today = new Date().toDateString();
+			    const lastDate = localStorage.getItem('pomodoroLastDate');
+			    
+			    if (lastDate !== today) {
+			        // 前日のデータを週間データに追加
+			        if (stats.todayPomodoros > 0) {
+			            stats.weeklyData.unshift(stats.todayPomodoros);
+			            while (stats.weeklyData.length > 7) {
+			                stats.weeklyData.pop();
+			            }
+			        }
+			        
+			        // 日別カウンターをリセット
+			        stats.todayPomodoros = 0;
+			        stats.totalTime = 0;
+			        
+			        // 最終日付を更新
+			        localStorage.setItem('pomodoroLastDate', today);
+			        
+			        // 統計表示を更新
+			        updateStatisticsDisplay();
+			        drawWeeklyChart();
+			    }
+			}
 
             // ローカルストレージからデータを読み込む
             function loadFromLocalStorage() {
@@ -720,33 +750,8 @@ All rights reserved.
                 // 統計
                 const savedStats = JSON.parse(localStorage.getItem('pomodoroStats'));
                 if (savedStats) {
-                    // 日付をチェックして、新しい日なら統計をリセット
-                    const today = new Date().toDateString();
-                    const lastDate = localStorage.getItem('pomodoroLastDate');
-                    
-                    if (lastDate !== today) {
-                        // 前回のデータを配列に追加
-                        if (lastDate) {
-                            // lastDateオブジェクトを作成
-                            const lastDateObj = new Date(lastDate);
-
-                            // 前回の日のポモドーロカウントが0より大きい場合のみ記録
-                            if (savedStats.todayPomodoros > 0) {
-                                // 日付とポモドーロ数をペアで保存
-                                savedStats.weeklyData.unshift(savedStats.todayPomodoros);
-
-                                // 配列の長さを7に維持（過去7日分のデータのみ保持）
-                                while (savedStats.weeklyData.length > 7) {
-                                    savedStats.weeklyData.pop();
-                                }
-                            }
-                        }
-
-                        // 今日のカウンターをリセット
-                        savedStats.todayPomodoros = 0;
-                        savedStats.totalTime = 0;
-                        localStorage.setItem('pomodoroLastDate', today);
-                    }
+                    checkDateChange()
+                    　
                     
                     stats = savedStats;
                 } else {
@@ -873,6 +878,15 @@ All rights reserved.
                 }
             }
 
+			// アプリ起動時に日付チェック用のインターバルを設定
+			function setupDateChangeChecker() {
+			    // すでに設定されている場合はクリア
+			    if (dateCheckIntervalId !== null) {
+			        clearInterval(dateCheckIntervalId);
+			    }
+  			    // 1分ごとに日付変更をチェック
+			    setInterval(checkDateChange, 60000);
+			}
             // タイマー開始関数
             function startTimer() {
                 if (!timer.isRunning) {
@@ -1373,6 +1387,7 @@ All rights reserved.
                 initProgressCircle();
                 resetTimer();
                 setupEventListeners();
+                setupDateChangeChecker();//日付チェックのタイマー設定
                 renderTasks();
                 drawWeeklyChart();
             }
