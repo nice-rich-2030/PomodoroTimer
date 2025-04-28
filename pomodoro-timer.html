@@ -554,6 +554,27 @@ All rights reserved.
         body.focus-mode .timer-section {
             height: calc(100vh - 120px);
         }
+		.chart-toggle {
+		  display: flex;
+		  justify-content: center;
+		  margin-bottom: 10px;
+		}
+
+		.chart-toggle-btn {
+		  padding: 5px 10px;
+		  margin: 0 5px;
+		  border: 1px solid var(--border-color);
+		  border-radius: 4px;
+		  background-color: transparent;
+		  color: var(--text-color);
+		  cursor: pointer;
+		  transition: background-color 0.2s;
+		}
+
+		.chart-toggle-btn.active {
+		  background-color: var(--primary-color);
+		  color: white;
+		}
     </style>
 </head>
 <body>
@@ -636,6 +657,10 @@ All rights reserved.
                 </div>
             </div>
             <div class="chart-container">
+				<div class="chart-toggle">
+				  <button id="show-pomodoros" class="chart-toggle-btn active">🍅 ポモドーロ数</button>
+				  <button id="show-focus-time" class="chart-toggle-btn">⏱️ 集中時間</button>
+				</div>
                 <!-- ここに週間グラフが表示される -->
                 <svg id="weekly-chart" width="100%" height="100%"></svg>
             </div>
@@ -673,6 +698,9 @@ All rights reserved.
             const totalTimeDisplay = document.getElementById('total-time');
             const completedTasksCountDisplay = document.getElementById('completed-tasks-count');
             const weeklyChart = document.getElementById('weekly-chart');
+			const showPomodorosBtn = document.getElementById('show-pomodoros');
+			const showFocusTimeBtn = document.getElementById('show-focus-time');
+			let chartDisplayMode = 'pomodoros'; // デフォルト表示モード
 
             // Timer State
             let timer = {
@@ -685,13 +713,12 @@ All rights reserved.
                 pomodoroCount: 0
             };
 
-            // Statistics
-            let stats = {
-                todayPomodoros: 0,
-                totalTime: 0, // 分単位
-                completedTasks: 0,
-                weeklyData: [0, 0, 0, 0, 0, 0, 0] // 過去7日間のポモドーロ
-            };
+			// 1. statsオブジェクトの構造変更
+			let stats = {
+			    completedTasks: 0,
+			    // weeklyDataの構造を変更
+			    weeklyData: [] // 過去のデータを {date: "YYYY-MM-DD", pomodoros: 0, focusTime: 0} 形式で保存
+			};
 
             // Tasks
             let tasks = [];
@@ -700,23 +727,29 @@ All rights reserved.
             // グローバルスコープでインターバルIDを保持する変数
 			let dateCheckIntervalId = null;
 
-			// タイマー更新時に日付チェックを行う関数を追加
+			// 2. 日付チェック関数の修正
 			function checkDateChange() {
 			    const today = new Date().toDateString();
+			    const todayFormatted = formatDateYMD(new Date()); // YYYY-MM-DD形式の日付
 			    const lastDate = localStorage.getItem('pomodoroLastDate');
 			    
 			    if (lastDate !== today) {
-			        // 前日のデータを週間データに追加
-			        if (stats.todayPomodoros > 0) {
-			            stats.weeklyData.unshift(stats.todayPomodoros);
+			        // 前回の日付がある場合、新しいエントリを追加
+			        const todayEntry = stats.weeklyData.find(entry => entry.date === todayFormatted);
+			        
+			        if (!todayEntry) {
+			            // 今日のエントリがまだなければ、新しいエントリを追加
+			            stats.weeklyData.unshift({
+			                date: todayFormatted,
+			                pomodoros: 0,
+			                focusTime: 0
+			            });
+			            
+			            // 7日分以上あれば古いものを削除
 			            while (stats.weeklyData.length > 7) {
 			                stats.weeklyData.pop();
 			            }
 			        }
-			        
-			        // 日別カウンターをリセット
-			        stats.todayPomodoros = 0;
-			        stats.totalTime = 0;
 			        
 			        // 最終日付を更新
 			        localStorage.setItem('pomodoroLastDate', today);
@@ -727,6 +760,14 @@ All rights reserved.
 			    }
 			}
 
+			// 3. 日付をYYYY-MM-DD形式にフォーマットする関数の追加
+			function formatDateYMD(date) {
+			    const year = date.getFullYear();
+			    const month = String(date.getMonth() + 1).padStart(2, '0');
+			    const day = String(date.getDate()).padStart(2, '0');
+			    return `${year}-${month}-${day}`;
+			}
+			
             // ローカルストレージからデータを読み込む
             function loadFromLocalStorage() {
                 // タイマー設定
@@ -747,24 +788,23 @@ All rights reserved.
                     renderTasks();
                 }
 
-                // 統計
-                const savedStats = JSON.parse(localStorage.getItem('pomodoroStats'));
-                if (savedStats) {
-                    checkDateChange()
-                    　
-                    
-                    stats = savedStats;
-                } else {
-                    // 初期データがない場合は作成
-                    stats = {
-                        todayPomodoros: 0,
-                        totalTime: 0,
-                        completedTasks: 0,
-                        weeklyData: [] // 過去の日のデータ
-                    };
-                    localStorage.setItem('pomodoroLastDate', new Date().toDateString());
-                }
-
+			    // 統計
+			    const savedStats = JSON.parse(localStorage.getItem('pomodoroStats'));
+			    if (savedStats) {
+			        stats = savedStats;
+			    } else {
+			        // 初期データがない場合は作成
+			        const today = formatDateYMD(new Date());
+			        stats = {
+			            completedTasks: 0,
+			            weeklyData: [{
+			                date: today,
+			                pomodoros: 0,
+			                focusTime: 0
+			            }]
+			        };
+			        localStorage.setItem('pomodoroLastDate', new Date().toDateString());
+			    }
                 // テーマ
                 const darkMode = localStorage.getItem('pomodoroDarkMode') === 'true';
                 themeToggle.checked = darkMode;
@@ -776,8 +816,6 @@ All rights reserved.
                 timer.pomodoroCount = parseInt(localStorage.getItem('pomodoroCount') || '0');
                 pomodoroCountDisplay.textContent = timer.pomodoroCount;
 
-                updateStatisticsDisplay();
-                drawWeeklyChart();
             }
 
             // ローカルストレージにデータを保存
@@ -793,7 +831,7 @@ All rights reserved.
 
                 // 統計
                 localStorage.setItem('pomodoroStats', JSON.stringify(stats));
-                localStorage.setItem('pomodoroLastDate', new Date().toDateString());
+                //localStorage.setItem('pomodoroLastDate', new Date().toDateString());
 
                 // テーマ
                 localStorage.setItem('pomodoroDarkMode', themeToggle.checked);
@@ -828,25 +866,48 @@ All rights reserved.
                     //notificationSound.play();
                     // 通知を表示
                     notifyTimerEnd();
-                    if (timer.mode === 'work') {
-                        // 作業モードが終了した場合
-                        timer.mode = 'break';
-                        timer.currentTime = timer.breakTime;
-                        statusDisplay.textContent = '休憩';
-                        statusDisplay.style.color = 'var(--secondary-color)';
-                        circleProgress.style.stroke = 'var(--secondary-color)';
-                        timer.pomodoroCount++;
-                        pomodoroCountDisplay.textContent = timer.pomodoroCount;
-                        
-                        // 統計更新
-                        stats.todayPomodoros++;
-                        stats.totalTime += timer.workTime / 60;
-                        updateStatisticsDisplay();
-                        drawWeeklyChart(); // この行を追加
-                        
-                        // 選択されているタスクのポモドーロカウントを更新
-                        updateTaskPomodoro();
-                    } else {
+					// タイマー更新関数内のポモドーロ完了時の処理を変更
+					// updateTimer関数内の該当部分を変更
+					if (timer.mode === 'work') {
+					    // 作業モードが終了した場合
+					    timer.mode = 'break';
+					    timer.currentTime = timer.breakTime;
+					    statusDisplay.textContent = '休憩';
+					    statusDisplay.style.color = 'var(--secondary-color)';
+					    circleProgress.style.stroke = 'var(--secondary-color)';
+					    timer.pomodoroCount++;
+					    pomodoroCountDisplay.textContent = timer.pomodoroCount;
+					    
+					    // 統計更新
+					    const today = formatDateYMD(new Date());
+					    // 今日のデータがあるか確認
+					    let todayEntry = stats.weeklyData.find(entry => entry.date === today);
+					    
+					    if (!todayEntry) {
+					        // 今日のエントリがなければ追加
+					        todayEntry = {
+					            date: today,
+					            pomodoros: 0,
+					            focusTime: 0
+					        };
+					        stats.weeklyData.unshift(todayEntry);
+					        
+					        // 7日分以上あれば古いものを削除
+					        while (stats.weeklyData.length > 7) {
+					            stats.weeklyData.pop();
+					        }
+					    }
+					    
+					    // 今日のデータを更新
+					    todayEntry.pomodoros++;
+					    todayEntry.focusTime += timer.workTime / 60;
+					    
+					    updateStatisticsDisplay();
+					    drawWeeklyChart();
+					    
+					    // 選択されているタスクのポモドーロカウントを更新
+					    updateTaskPomodoro();
+					} else {
                         // 休憩モードが終了した場合
                         timer.mode = 'work';
                         timer.currentTime = timer.workTime;
@@ -1038,12 +1099,16 @@ All rights reserved.
                 completedTasksDisplay.textContent = completedCount;
             }
 
-            // 統計表示更新関数
-            function updateStatisticsDisplay() {
-                todayPomodorosDisplay.textContent = stats.todayPomodoros;
-                totalTimeDisplay.textContent = stats.totalTime;
-                completedTasksCountDisplay.textContent = stats.completedTasks;
-            }
+			// 6. 統計表示更新関数の修正
+			function updateStatisticsDisplay() {
+			    // 今日のデータを取得
+			    const today = formatDateYMD(new Date());
+			    const todayEntry = stats.weeklyData.find(entry => entry.date === today) || { pomodoros: 0, focusTime: 0 };
+			    
+			    todayPomodorosDisplay.textContent = todayEntry.pomodoros;
+			    totalTimeDisplay.textContent = todayEntry.focusTime;
+			    completedTasksCountDisplay.textContent = stats.completedTasks;
+			}
 
             // ドラッグ＆ドロップ実装
             let draggedItem = null;
@@ -1098,154 +1163,144 @@ All rights reserved.
                 draggedItem = null;
             }
 
-            // 週間チャート描画関数
-            function drawWeeklyChart() {
-                const svg = weeklyChart;
-                svg.innerHTML = '';
-                
-                const width = svg.clientWidth;
-                const height = svg.clientHeight;
-                const padding = 40;
-                const chartWidth = width - (padding * 2);
-                const chartHeight = height - (padding * 2);
+			// 7. 週間チャート描画関数の修正 - 記録に残っている7回分を表示
+			function drawWeeklyChart() {
+			    const svg = weeklyChart;
+			    svg.innerHTML = '';
+			    
+			    const width = svg.clientWidth;
+			    const height = svg.clientHeight;
+			    const padding = 40;
+			    const chartWidth = width - (padding * 2);
+			    const chartHeight = height - (padding * 2);
 
-                // 日付データとポモドーロデータを保持する配列を作成
-                let chartData = [];
+			    // 記録されているデータを日付順にソート
+			    let chartData = [...stats.weeklyData].sort((a, b) => {
+			        return new Date(b.date) - new Date(a.date);
+			    });
 
-                // 今日の日付を取得
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+			    // データがない場合は早期リターン
+			    if (chartData.length === 0) {
+			        // グラフがないことを示すメッセージを表示
+			        const noDataText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+			        noDataText.setAttribute('x', width / 2);
+			        noDataText.setAttribute('y', height / 2);
+			        noDataText.setAttribute('text-anchor', 'middle');
+			        noDataText.setAttribute('fill', 'var(--text-color)');
+			        noDataText.setAttribute('font-size', '14');
+			        noDataText.textContent = 'データがありません';
+			        svg.appendChild(noDataText);
+			        return;
+			    }
 
-                // 今日のデータを追加
-                chartData.push({
-                    date: today,
-                    count: stats.todayPomodoros,
-                    label: formatDateLabel(today)
-                });
+			    // 最大7つまでのデータを使用
+			    chartData = chartData.slice(0, 7);
 
-                // 過去のデータを追加 (値が0でないデータのみ)
-                for (let i = 0; i < stats.weeklyData.length; i++) {
-                    if (stats.weeklyData[i] > 0) {
-                        // i+1日前の日付を計算
-                        const date = new Date(today);
-                        date.setDate(today.getDate() - (i + 1));
+			    // 各エントリに日付オブジェクトと表示用ラベルを追加
+			    chartData.forEach(entry => {
+			        entry.dateObj = new Date(entry.date);
+			        entry.label = formatDateLabel(entry.dateObj);
+			    });
 
-                        chartData.push({
-                            date: date,
-                            count: stats.weeklyData[i],
-                            label: formatDateLabel(date)
-                        });
-                    }
-                }
+				// 最大値を計算 (現在の表示モードに基づく)
+				let maxValue;
+				if (chartDisplayMode === 'pomodoros') {
+				  maxValue = Math.max(...chartData.map(item => item.pomodoros), 1);
+				} else {
+				  maxValue = Math.max(...chartData.map(item => item.focusTime), 1);
+				}
+			    // バーの幅を計算
+			    const barWidth = chartWidth / chartData.length;
 
-                // データが存在する日のみを取得し、日付順にソート
-                chartData = chartData.filter(item => item.count > 0)
-                    .sort((a, b) => a.date - b.date);
+			    // Y軸
+			    const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+			    yAxis.setAttribute('x1', padding);
+			    yAxis.setAttribute('y1', padding);
+			    yAxis.setAttribute('x2', padding);
+			    yAxis.setAttribute('y2', height - padding);
+			    yAxis.setAttribute('stroke', 'var(--text-color)');
+			    yAxis.setAttribute('stroke-width', '1');
+			    svg.appendChild(yAxis);
+			    
+			    // X軸
+			    const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+			    xAxis.setAttribute('x1', padding);
+			    xAxis.setAttribute('y1', height - padding);
+			    xAxis.setAttribute('x2', width - padding);
+			    xAxis.setAttribute('y2', height - padding);
+			    xAxis.setAttribute('stroke', 'var(--text-color)');
+			    xAxis.setAttribute('stroke-width', '1');
+			    svg.appendChild(xAxis);
 
-                // データがない場合は早期リターン
-                if (chartData.length === 0) {
-                    // グラフがないことを示すメッセージを表示
-                    const noDataText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    noDataText.setAttribute('x', width / 2);
-                    noDataText.setAttribute('y', height / 2);
-                    noDataText.setAttribute('text-anchor', 'middle');
-                    noDataText.setAttribute('fill', 'var(--text-color)');
-                    noDataText.setAttribute('font-size', '14');
-                    noDataText.textContent = 'データがありません';
-                    svg.appendChild(noDataText);
-                    return;
-                }
+			    // グラフのタイトル
+			    const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+			    titleText.setAttribute('x', width / 2);
+			    titleText.setAttribute('y', padding / 2);
+			    titleText.setAttribute('text-anchor', 'middle');
+			    titleText.setAttribute('fill', 'var(--primary-color)');
+			    titleText.setAttribute('font-size', '14');
+			    titleText.setAttribute('font-weight', 'bold');
+				titleText.textContent = chartDisplayMode === 'pomodoros' ? 
+				                         'ポモドーロ記録履歴' : '集中時間記録履歴 (分)';
+				svg.appendChild(titleText);
+				  
+			    // バーとラベルを描画
+			    chartData.forEach((item, index) => {
+					// 表示モードに基づいて値を取得
+					const value = chartDisplayMode === 'pomodoros' ? item.pomodoros : item.focusTime;
+					const barHeight = value / maxValue * chartHeight;
+					const x = padding + (index * barWidth);
+			        const y = height - padding - barHeight;
+			        
+					// バーの色も表示モードによって変更
+					const barColor = chartDisplayMode === 'pomodoros' ? 
+					                'var(--primary-color)' : 'var(--secondary-color)';
+                     // バー
+			        const bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+			        bar.setAttribute('x', x + 5);
+			        bar.setAttribute('y', y);
+			        bar.setAttribute('width', barWidth - 10);
+			        bar.setAttribute('height', barHeight);
+			        bar.setAttribute('fill', barColor);
+			        bar.setAttribute('rx', '4');
+			        svg.appendChild(bar);
+			        
+			        // 値ラベル
+				    if (value > 0) {
+				      const valueText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+			            valueText.setAttribute('x', x + barWidth / 2);
+			            valueText.setAttribute('y', y - 5);
+			            valueText.setAttribute('text-anchor', 'middle');
+			            valueText.setAttribute('fill', 'var(--text-color)');
+			            valueText.setAttribute('font-size', '12');
+			            valueText.textContent = value;
+			            svg.appendChild(valueText);
+			        }
 
-                // 最大値を計算
-                const maxValue = Math.max(...chartData.map(item => item.count), 1);
+			        // 日付と曜日を2行で表示
+			        const dateLabel = item.label.split('\n');
 
-                // バーの幅を計算 (最大7日分を表示)
-                const barWidth = Math.min(chartWidth / chartData.length, chartWidth / 7);
+			        // 日付ラベル (MM/DD)
+			        const dateText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+			        dateText.setAttribute('x', x + barWidth / 2);
+			        dateText.setAttribute('y', height - padding + 15);
+			        dateText.setAttribute('text-anchor', 'middle');
+			        dateText.setAttribute('fill', 'var(--text-color)');
+			        dateText.setAttribute('font-size', '12');
+			        dateText.textContent = dateLabel[0]; // MM/DD部分
+			        svg.appendChild(dateText);
 
-                // Y軸
-                const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                yAxis.setAttribute('x1', padding);
-                yAxis.setAttribute('y1', padding);
-                yAxis.setAttribute('x2', padding);
-                yAxis.setAttribute('y2', height - padding);
-                yAxis.setAttribute('stroke', 'var(--text-color)');
-                yAxis.setAttribute('stroke-width', '1');
-                svg.appendChild(yAxis);
-                
-                // X軸
-                const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                xAxis.setAttribute('x1', padding);
-                xAxis.setAttribute('y1', height - padding);
-                xAxis.setAttribute('x2', width - padding);
-                xAxis.setAttribute('y2', height - padding);
-                xAxis.setAttribute('stroke', 'var(--text-color)');
-                xAxis.setAttribute('stroke-width', '1');
-                svg.appendChild(xAxis);
-
-                // グラフのタイトル
-                const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                titleText.setAttribute('x', width / 2);
-                titleText.setAttribute('y', padding / 2);
-                titleText.setAttribute('text-anchor', 'middle');
-                titleText.setAttribute('fill', 'var(--primary-color)');
-                titleText.setAttribute('font-size', '14');
-                titleText.setAttribute('font-weight', 'bold');
-                titleText.textContent = '日別ポモドーロ記録';
-                svg.appendChild(titleText);
-
-                // バーとラベルを描画
-                chartData.forEach((item, index) => {
-                    const barHeight = item.count / maxValue * chartHeight;
-                    const x = padding + (index * barWidth);
-                    const y = height - padding - barHeight;
-                    
-                    // バー
-                    const bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    bar.setAttribute('x', x + 5);
-                    bar.setAttribute('y', y);
-                    bar.setAttribute('width', barWidth - 10);
-                    bar.setAttribute('height', barHeight);
-                    bar.setAttribute('fill', 'var(--primary-color)');
-                    bar.setAttribute('rx', '4');
-                    svg.appendChild(bar);
-                    
-                    // 値ラベル
-                    if (item.count > 0) {
-                        const valueText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                        valueText.setAttribute('x', x + barWidth / 2);
-                        valueText.setAttribute('y', y - 5);
-                        valueText.setAttribute('text-anchor', 'middle');
-                        valueText.setAttribute('fill', 'var(--text-color)');
-                        valueText.setAttribute('font-size', '12');
-                        valueText.textContent = item.count;
-                        svg.appendChild(valueText);
-                    }
-
-                    // 日付と曜日を2行で表示
-                    const dateLabel = item.label.split('\n');
-
-                    // 日付ラベル (MM/DD)
-                    const dateText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    dateText.setAttribute('x', x + barWidth / 2);
-                    dateText.setAttribute('y', height - padding + 15);
-                    dateText.setAttribute('text-anchor', 'middle');
-                    dateText.setAttribute('fill', 'var(--text-color)');
-                    dateText.setAttribute('font-size', '12');
-                    dateText.textContent = dateLabel[0]; // MM/DD部分
-                    svg.appendChild(dateText);
-
-                    // 曜日ラベル
-                    const weekdayText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    weekdayText.setAttribute('x', x + barWidth / 2);
-                    weekdayText.setAttribute('y', height - padding + 30);
-                    weekdayText.setAttribute('text-anchor', 'middle');
-                    weekdayText.setAttribute('fill', 'var(--text-color)');
-                    weekdayText.setAttribute('font-size', '10');
-                    weekdayText.textContent = dateLabel[1]; // (曜日)部分
-                    svg.appendChild(weekdayText);
-                });
-            }
-
+			        // 曜日ラベル
+			        const weekdayText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+			        weekdayText.setAttribute('x', x + barWidth / 2);
+			        weekdayText.setAttribute('y', height - padding + 30);
+			        weekdayText.setAttribute('text-anchor', 'middle');
+			        weekdayText.setAttribute('fill', 'var(--text-color)');
+			        weekdayText.setAttribute('font-size', '10');
+			        weekdayText.textContent = dateLabel[1]; // (曜日)部分
+			        svg.appendChild(weekdayText);
+			    });
+			}
             // 日付を「MM/DD」形式と曜日でフォーマットする関数
             function formatDateLabel(date) {
                 const month = date.getMonth() + 1; // 月は0から始まるので+1
@@ -1369,6 +1424,21 @@ All rights reserved.
                 
                 // ウィンドウリサイズ時にグラフ再描画
                 window.addEventListener('resize', drawWeeklyChart);
+
+				// イベントリスナーの追加
+				showPomodorosBtn.addEventListener('click', function() {
+				  chartDisplayMode = 'pomodoros';
+				  showPomodorosBtn.classList.add('active');
+				  showFocusTimeBtn.classList.remove('active');
+				  drawWeeklyChart();
+				});
+
+				showFocusTimeBtn.addEventListener('click', function() {
+				  chartDisplayMode = 'focusTime';
+				  showFocusTimeBtn.classList.add('active');
+				  showPomodorosBtn.classList.remove('active');
+				  drawWeeklyChart();
+				});
             }
 
             // SVGプログレスバー初期化
@@ -1389,7 +1459,9 @@ All rights reserved.
                 setupEventListeners();
                 setupDateChangeChecker();//日付チェックのタイマー設定
                 renderTasks();
+                updateStatisticsDisplay();
                 drawWeeklyChart();
+                
             }
             // タイマー終了時に呼び出す通知関数
             function notifyTimerEnd() {
