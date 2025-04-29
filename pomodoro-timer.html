@@ -601,7 +601,7 @@ All rights reserved.
                 <button class="btn btn-secondary" id="pause-btn" disabled>⏸️ポーズ</button>
                 <button class="btn btn-outline" id="reset-btn">🔁 リセット</button>
             </div>
-            <div class="counter">完了したポモドーロ: <span id="pomodoro-count">0</span></div>
+            <div class="counter">完了した累積ポモドーロ: <span id="pomodoro-count">0</span></div>
 
             <div class="settings">
                 <h2 class="settings-title">⚙️ 設定</h2>
@@ -732,7 +732,8 @@ All rights reserved.
 			    const today = new Date().toDateString();
 			    const todayFormatted = formatDateYMD(new Date()); // YYYY-MM-DD形式の日付
 			    const lastDate = localStorage.getItem('pomodoroLastDate');
-			    
+			    console.log("checkDateChange lastDate:",lastDate);
+			    console.log("checkDateChange today:",today);
 			    if (lastDate !== today) {
 			        // 前回の日付がある場合、新しいエントリを追加
 			        const todayEntry = stats.weeklyData.find(entry => entry.date === todayFormatted);
@@ -757,6 +758,9 @@ All rights reserved.
 			        // 統計表示を更新
 			        updateStatisticsDisplay();
 			        drawWeeklyChart();
+    			    console.log("checkDateChange ○　update!:");
+			    }else{
+    			    console.log("checkDateChange ×no update:");
 			    }
 			}
 
@@ -1477,6 +1481,11 @@ All rights reserved.
 
             // デスクトップ通知機能
             function showNotification() {
+                // ローカルファイルかどうかをチェック
+                if (location.protocol === 'file:') {
+                    console.log('ローカル環境では通知は無効です');
+                    return; // ローカル環境では通知をスキップ
+                }
                 // 通知の権限をチェック
                 if (Notification.permission === "granted") {
                     // 通知を作成して表示
@@ -1484,7 +1493,6 @@ All rights reserved.
                         body: timer.mode === 'work' ? 
                             "作業時間が終了しました！休憩しましょう" : 
                             "休憩時間が終了しました！次の作業を始めましょう",
-                        icon: "/favicon.ico", // アプリのアイコン（適宜変更）
                         requireInteraction: true // ユーザーが操作するまで通知を消さない（Windows通知に効果的）
                     });
                     
