@@ -710,7 +710,10 @@ All rights reserved.
                 isRunning: false,
                 interval: null,
                 mode: 'work', // 'work' or 'break'
-                pomodoroCount: 0
+                pomodoroCount: 0,
+                startTimestamp: null, // タイマー開始時のタイムスタンプ
+                pausedTimeRemaining: null, // 一時停止時の残り時間
+                targetEndTime: null // タイマー終了予定時刻
             };
 
 			// 1. statsオブジェクトの構造変更
@@ -853,80 +856,119 @@ All rights reserved.
 
             // タイマー更新関数
             function updateTimer() {
-                if (timer.currentTime > 0) {
-                    timer.currentTime--;
-                    timeDisplay.textContent = formatTime(timer.currentTime);
+                if (timer.isRunning) {
+                    const now = new Date().getTime();
+                    const remainingMilliseconds = timer.targetEndTime - now;
                     
-                    // プログレスバー更新
-                    const totalTime = timer.mode === 'work' ? timer.workTime : timer.breakTime;
-                    const circumference = 2 * Math.PI * parseFloat(circleProgress.getAttribute('r'));
-                    const offset = circumference - (timer.currentTime / totalTime) * circumference;
-                    circleProgress.style.strokeDasharray = `${circumference} ${circumference}`;
-                    circleProgress.style.strokeDashoffset = offset;
-                } else {
-                    // タイマー終了
-                    clearInterval(timer.interval);
-                    timer.isRunning = false;
-                    //notificationSound.play();
-                    // 通知を表示
-                    notifyTimerEnd();
-					// タイマー更新関数内のポモドーロ完了時の処理を変更
-					// updateTimer関数内の該当部分を変更
-					if (timer.mode === 'work') {
-					    // 作業モードが終了した場合
-					    timer.mode = 'break';
-					    timer.currentTime = timer.breakTime;
-					    statusDisplay.textContent = '休憩';
-					    statusDisplay.style.color = 'var(--secondary-color)';
-					    circleProgress.style.stroke = 'var(--secondary-color)';
-					    timer.pomodoroCount++;
-					    pomodoroCountDisplay.textContent = timer.pomodoroCount;
-					    
-					    // 統計更新
-					    const today = formatDateYMD(new Date());
-					    // 今日のデータがあるか確認
-					    let todayEntry = stats.weeklyData.find(entry => entry.date === today);
-					    
-					    if (!todayEntry) {
-					        // 今日のエントリがなければ追加
-					        todayEntry = {
-					            date: today,
-					            pomodoros: 0,
-					            focusTime: 0
-					        };
-					        stats.weeklyData.unshift(todayEntry);
-					        
-					        // 7日分以上あれば古いものを削除
-					        while (stats.weeklyData.length > 7) {
-					            stats.weeklyData.pop();
-					        }
-					    }
-					    
-					    // 今日のデータを更新
-					    todayEntry.pomodoros++;
-					    todayEntry.focusTime += timer.workTime / 60;
-					    
-					    updateStatisticsDisplay();
-					    drawWeeklyChart();
-					    
-					    // 選択されているタスクのポモドーロカウントを更新
-					    updateTaskPomodoro();
-					} else {
-                        // 休憩モードが終了した場合
-                        timer.mode = 'work';
-                        timer.currentTime = timer.workTime;
-                        statusDisplay.textContent = '作業';
-                        statusDisplay.style.color = 'var(--primary-color)';
-                        circleProgress.style.stroke = 'var(--primary-color)';
+                    if (remainingMilliseconds <= 0) {
+                        // タイマー終了
+                        clearInterval(timer.interval);
+                        timer.isRunning = false;
+                        
+                        // 通知を表示
+                        notifyTimerEnd();
+                        
+                        if (timer.mode === 'work') {
+                            // 作業モードが終了した場合
+                            timer.mode = 'break';
+                            timer.currentTime = timer.breakTime;
+                            statusDisplay.textContent = '休憩';
+                            statusDisplay.style.color = 'var(--secondary-color)';
+                            circleProgress.style.stroke = 'var(--secondary-color)';
+                            timer.pomodoroCount++;
+                            pomodoroCountDisplay.textContent = timer.pomodoroCount;
+                            
+                            // 統計更新
+                            const today = formatDateYMD(new Date());
+                            let todayEntry = stats.weeklyData.find(entry => entry.date === today);
+                            
+                            if (!todayEntry) {
+                                todayEntry = {
+                                    date: today,
+                                    pomodoros: 0,
+                                    focusTime: 0
+                                };
+                                stats.weeklyData.unshift(todayEntry);
+                                
+                                while (stats.weeklyData.length > 7) {
+                                    stats.weeklyData.pop();
+                                }
+                            }
+                            
+                            todayEntry.pomodoros++;
+                            todayEntry.focusTime += timer.workTime / 60;
+                            
+                            updateStatisticsDisplay();
+                            drawWeeklyChart();
+                            
+                            // 選択されているタスクのポモドーロカウントを更新
+                            updateTaskPomodoro();
+                        } else {
+                            // 休憩モードが終了した場合
+                            timer.mode = 'work';
+                            timer.currentTime = timer.workTime;
+                            statusDisplay.textContent = '作業';
+                            statusDisplay.style.color = 'var(--primary-color)';
+                            circleProgress.style.stroke = 'var(--primary-color)';
+                        }
+                        
+                        timeDisplay.textContent = formatTime(timer.currentTime);
+                        
+                        // プログレスバーを更新
+                        updateProgressBar(100);
+                        
+                        startBtn.disabled = false;
+                        pauseBtn.disabled = true;
+                        
+                        saveToLocalStorage();
+                        return;
                     }
                     
+                    // 残り時間を秒単位で計算
+                    timer.currentTime = Math.ceil(remainingMilliseconds / 1000);
                     timeDisplay.textContent = formatTime(timer.currentTime);
-                    startBtn.disabled = false;
-                    pauseBtn.disabled = true;
                     
-                    saveToLocalStorage();
+                    // プログレスバーの更新
+                    const totalTime = timer.mode === 'work' ? timer.workTime : timer.breakTime;
+                    const progressPercent = 100 - (timer.currentTime / totalTime * 100);
+                    updateProgressBar(progressPercent);
                 }
             }
+
+            // プログレスバー更新を別の関数に分離
+            function updateProgressBar(percentComplete) {
+                const circumference = 2 * Math.PI * parseFloat(circleProgress.getAttribute('r'));
+                const offset = (100 - percentComplete) / 100 * circumference;
+                circleProgress.style.strokeDasharray = `${circumference} ${circumference}`;
+                circleProgress.style.strokeDashoffset = offset;
+            }
+
+            // タイマーリセット関数を修正
+            function resetTimer() {
+                pauseTimer();
+                clearInterval(timer.interval);
+                
+                timer.mode = 'work';
+                timer.currentTime = timer.workTime;
+                timer.isRunning = false;
+                timer.startTimestamp = null;
+                timer.pausedTimeRemaining = null;
+                timer.targetEndTime = null;
+                
+                timeDisplay.textContent = formatTime(timer.currentTime);
+                statusDisplay.textContent = '作業';
+                statusDisplay.style.color = 'var(--primary-color)';
+                circleProgress.style.stroke = 'var(--primary-color)';
+                
+                // プログレスバーリセット
+                updateProgressBar(0);
+                
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+            }
+
+
+
 
             // 選択されているタスクのポモドーロカウントを更新
             function updateTaskPomodoro() {
@@ -955,13 +997,28 @@ All rights reserved.
             // タイマー開始関数
             function startTimer() {
                 if (!timer.isRunning) {
+                    const now = new Date().getTime();
+                    
+                    if (timer.pausedTimeRemaining !== null) {
+                        // 一時停止状態から再開する場合
+                        timer.targetEndTime = now + (timer.pausedTimeRemaining * 1000);
+                        timer.pausedTimeRemaining = null;
+                    } else {
+                        // 新規開始または再開する場合
+                        timer.currentTime = timer.mode === 'work' ? timer.workTime : timer.breakTime;
+                        timer.targetEndTime = now + (timer.currentTime * 1000);
+                    }
+                    
+                    timer.startTimestamp = now;
                     timer.isRunning = true;
-                    timer.interval = setInterval(updateTimer, 1000);
+                    timer.interval = setInterval(updateTimer, 100); // より頻繁に更新して精度を上げる
+                    
                     startBtn.disabled = true;
                     pauseBtn.disabled = false;
+                    
                     if (timer.mode === 'work') {
                         statusDisplay.textContent = '🔥作業中';
-                    }else{
+                    } else {
                         statusDisplay.textContent = '☕休憩中';
                     }
                 }
@@ -970,33 +1027,26 @@ All rights reserved.
             // タイマー一時停止関数
             function pauseTimer() {
                 if (timer.isRunning) {
-                    timer.isRunning = false;
                     clearInterval(timer.interval);
+                    timer.isRunning = false;
+                    
+                    // 残り時間を計算して保存
+                    const now = new Date().getTime();
+                    const remainingMilliseconds = timer.targetEndTime - now;
+                    timer.pausedTimeRemaining = Math.max(0, Math.floor(remainingMilliseconds / 1000));
+                    
                     startBtn.disabled = false;
                     pauseBtn.disabled = true;
+                    
                     if (timer.mode === 'work') {
                         statusDisplay.textContent = '停止中(作業)';
-                    }else{
+                    } else {
                         statusDisplay.textContent = '停止中(休憩)';
                     }
                 }
             }
 
-            // タイマーリセット関数
-            function resetTimer() {
-                pauseTimer();
-                timer.mode = 'work';
-                timer.currentTime = timer.workTime;
-                timeDisplay.textContent = formatTime(timer.currentTime);
-                statusDisplay.textContent = '作業';
-                statusDisplay.style.color = 'var(--primary-color)';
-                circleProgress.style.stroke = 'var(--primary-color)';
-                
-                // プログレスバーリセット
-                const circumference = 2 * Math.PI * parseFloat(circleProgress.getAttribute('r'));
-                circleProgress.style.strokeDasharray = `${circumference} ${circumference}`;
-                circleProgress.style.strokeDashoffset = 0;
-            }
+ 
 
             // タスク描画関数
             function renderTasks() {
@@ -1443,6 +1493,14 @@ All rights reserved.
 				  showPomodorosBtn.classList.remove('active');
 				  drawWeeklyChart();
 				});
+
+                // ブラウザ内のビジビリティ変更に対応（アクティブタブに戻ったときの処理）
+                document.addEventListener('visibilitychange', function() {
+                    if (document.visibilityState === 'visible' && timer.isRunning) {
+                        // タブがアクティブになった時、タイマーの表示を即時更新
+                        updateTimer();
+                    }
+                });                
             }
 
             // SVGプログレスバー初期化
@@ -1463,8 +1521,9 @@ All rights reserved.
                 setupEventListeners();
                 setupDateChangeChecker();//日付チェックのタイマー設定
                 renderTasks();
-                updateStatisticsDisplay();
-                drawWeeklyChart();
+                checkDateChange();
+                //updateStatisticsDisplay();
+                //drawWeeklyChart();
                 
             }
             // タイマー終了時に呼び出す通知関数
