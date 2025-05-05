@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowState</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">FlowState</h1>
+            <label class="theme-switch">
+                <input type="checkbox" id="theme-toggle">
+                <span class="slider"></span>
+            </label>
+        </header>
+
+        <section class="timer-section">
+            <div class="circle-progress">
+                <svg>
+                    <circle class="circle-background" cx="50%" cy="50%" r="45%" />
+                    <circle class="circle-progress-bar" cx="50%" cy="50%" r="45%" />
+                </svg>
+                <div class="time-display">25:00</div>
+            </div>
+            <div class="status">作業</div>
+            <div class="controls">
+                <button class="btn btn-primary" id="start-btn">▶️スタート</button>
+                <button class="btn btn-secondary" id="pause-btn" disabled>⏸️ポーズ</button>
+                <button class="btn btn-outline" id="reset-btn">🔁 リセット</button>
+            </div>
+            <div class="counter">完了した累積ポモドーロ: <span id="pomodoro-count">0</span></div>
+
+            <div class="settings">
+                <h2 class="settings-title">⚙️ 設定</h2>
+                <div class="setting-group">
+                    <label for="work-time">🔥作業時間: <span id="work-time-display">25</span>分</label>
+                    <input type="range" id="work-time" min="1" max="60" value="25">
+                </div>
+                <div class="setting-group">
+                    <label for="break-time">☕休憩時間: <span id="break-time-display">5</span>分</label>
+                    <input type="range" id="break-time" min="1" max="30" value="5">
+                </div>
+                <div class="preset-buttons">
+                    <button class="preset-btn" data-work="15" data-break="5">15/5</button>
+                    <button class="preset-btn" data-work="25" data-break="5">25/5</button>
+                    <button class="preset-btn" data-work="40" data-break="10">40/10</button>
+                    <button class="preset-btn" data-work="50" data-break="10">50/10</button>
+                </div>
+                <div class="focus-mode-toggle">
+                    <input type="checkbox" id="focus-mode"> <label for="focus-mode">集中モード</label>
+                </div>
+            </div>
+        </section>
+
+        <section class="tasks-section">
+            <h2>📝 タスクリスト</h2>
+            <form id="task-form" class="task-form">
+                <input type="text" id="task-input" class="task-input" placeholder="新しいタスクを入力..." required>
+                <input type="number" id="pomodoro-count-input" class="pomodoro-count" min="1" value="1"
+                    title="予定ポモドーロ数">
+                <button type="submit" class="btn btn-primary">➕ 追加</button>
+            </form>
+            <ul id="task-list" class="task-list"></ul>
+            <div class="task-stats">
+                <p>全タスク: <span id="total-tasks">0</span> / 完了: <span id="completed-tasks">0</span></p>
+                <button class="hide-completed" id="toggle-completed">👁️ 完了したタスクを表示/非表示</button>
+            </div>
+        </section>
+
+        <section class="statistics-section">
+            <h2 class="statistics-title">📊 統計</h2>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value" id="today-pomodoros">0</div>
+                    <div class="stat-label">本日のポモドーロ</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-time">0</div>
+                    <div class="stat-label">本日の集中時間 (分)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="completed-tasks-count">0</div>
+                    <div class="stat-label">完了したタスク</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-toggle">
+                    <button id="show-pomodoros" class="chart-toggle-btn active">🍅 ポモドーロ数</button>
+                    <button id="show-focus-time" class="chart-toggle-btn">⏱️ 集中時間</button>
+                </div>
+                <!-- ここに週間グラフが表示される -->
+                <svg id="weekly-chart" width="100%" height="100%"></svg>
+            </div>
+        </section>
+    </div>
+
+    <!-- 通知音のBase64エンコーディング -->
+    <audio id="notification-sound" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBhxQo/T/xHQrChs2e9f6zHg9CgoPHF7O/+GaTgcDAwtHuvj/qlMBAAMGM6Xo/8JmCAAAAyBsx+3/pGkhAQUKDi5p4Pv/owEACA8cJjWQ7///VwIBDRs2WvL//5FaKBMlLDxP4f//mzUEChYwM0ro//+uXiMSFiUb/fT8yxcY4bbc//oJ/iRXweDl+A0VCycrVrXq/v8RBQkbKkWm4/7/EgMBAwkNVI/q//8vDwEAAgQ3qff//1ASAQABBSOBzvn/cFILAgEDD2vT//94Mg0FBAkQf+r//11DBQMFCxmJ7f/qvksyWs7//wsWIzFTu/P//x4LEApXpuD6/yYGEA8gSfr//4ogDAYHDh1FzvH//1sLBAQHDW3z//9oHQoEBAcea9X//2YhCwUFCRqO6v//ZhsIAwQILvL//3EcBAEBBET//5kyBgIAAgZL6P//3mphco+gemo0FICjromPfWthYHOJnp9MBj1qusjBiWA9THTY//+SOQEVVbLc5fJJIRUySbPc6PgtEBQjL2C/4O76Jw0PIzFVmdnw/DIQDxgfL7Hf//k+EAwUISEvsOL//ogZBQACA1OL1Pv/chgGAAADQLPu//9mGgYAAAY0ltv//2oZBQABBy3Q/P//cRIFAAIZhdT//3YaBwEABC/j//+EGQIBAgxb1f//aRgDAwMOitL//2AXBAUGGvL//2AcBgICCkno//9wGgQCAgdR4f//bxcDAQMRrN3//0sZCQQEB1TN//9CGgkEBART4f//TBsGAwURgdz//0kaCAgJFX/j//9LIxYQEhGC5v//VDIhGRoVe+X//1pGMCoqHpnw//9DMjY0Jj7a//9iY1JJSzq9//++d0tGRD2L+f//kHc="></audio>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

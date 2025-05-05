@@ -1,0 +1,596 @@
+/* 
+* FlowState ポモドーロタイマー スタイルシート
+* Copyright (c) 2025 Daily Growth
+* https://yourworklifedesign.blogspot.com/
+* All rights reserved.
+*/
+
+/* テーマ変数の定義 */
+:root {
+    --primary-color: #ff6347;
+    --secondary-color: #4caf50;
+    --background-color: #ffffff;
+    --text-color: #333333;
+    --card-background: #f5f5f5;
+    --border-color: #dddddd;
+    --completed-color: #888888;
+    --progress-bg: #eeeeee;
+}
+
+/* ダークモード変数 */
+[data-theme="dark"] {
+    --primary-color: #ff7f6e;
+    --secondary-color: #5cca60;
+    --background-color: #1f1f1f;
+    --text-color: #f0f0f0;
+    --card-background: #2d2d2d;
+    --border-color: #444444;
+    --completed-color: #aaaaaa;
+    --progress-bg: #333333;
+}
+
+/* 基本スタイル */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    transition: background-color 0.3s, color 0.3s;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* コンテナとレイアウト */
+.container {
+    width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-gap: 20px;
+    height: calc(100vh - 40px);
+}
+
+/* レスポンシブグリッドレイアウト */
+@media (min-width: 768px) {
+    .container {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (min-width: 1600px) {
+    .container {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+/* ヘッダーセクション */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    grid-column: 1 / -1;
+}
+
+.title {
+    font-size: clamp(24px, 3vw, 48px);
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* テーマ切り替えスイッチ */
+.theme-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* タイマーセクション */
+.timer-section {
+    background-color: var(--card-background);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+}
+
+/* 円形プログレスバー */
+.circle-progress {
+    position: relative;
+    width: clamp(200px, 30vw, 400px);
+    height: clamp(200px, 30vw, 400px);
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.circle-progress svg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.circle-background {
+    fill: none;
+    stroke: var(--progress-bg);
+    stroke-width: 15;
+}
+
+.circle-progress-bar {
+    fill: none;
+    stroke: var(--primary-color);
+    stroke-width: 15;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s;
+}
+
+.time-display {
+    position: absolute;
+    font-size: clamp(36px, 5vw, 72px);
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* ステータス表示 */
+.status {
+    font-size: clamp(18px, 2vw, 24px);
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    text-shadow: 0 0 10px rgba(255, 99, 71, 0.5);
+    animation: glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 0 0 5px rgba(255, 99, 71, 0.5);
+    }
+    to {
+        text-shadow: 0 0 15px rgba(255, 99, 71, 0.8), 0 0 20px rgba(255, 99, 71, 0.5);
+    }
+}
+
+/* コントロールボタン */
+.controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.btn {
+    padding: 12px 24px;
+    font-size: clamp(14px, 1.5vw, 18px);
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+    min-width: 100px;
+}
+
+.btn:active {
+    transform: scale(0.95);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 2px solid var(--border-color);
+    color: var(--text-color);
+}
+
+/* ポモドーロカウンター */
+.counter {
+    font-size: clamp(14px, 1.5vw, 18px);
+    margin-top: 20px;
+}
+
+/* 設定セクション */
+.settings {
+    background-color: var(--card-background);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+.settings h2 {
+    font-size: clamp(18px, 2vw, 24px);
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(100, 100, 255, 0.5);
+    animation: settings-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes settings-glow {
+    from {
+        text-shadow: 0 0 5px rgba(100, 100, 255, 0.5);
+    }
+    to {
+        text-shadow: 0 0 15px rgba(100, 100, 255, 0.8), 0 0 20px rgba(100, 100, 255, 0.5);
+    }
+}
+
+.setting-group {
+    margin-bottom: 15px;
+}
+
+.setting-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.setting-group input[type="range"] {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.time-display-small {
+    font-size: clamp(14px, 1.5vw, 18px);
+    font-weight: bold;
+}
+
+/* プリセットボタン */
+.preset-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.preset-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.preset-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+/* タスクセクション */
+.tasks-section {
+    background-color: var(--card-background);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.tasks-section h2 {
+    font-size: clamp(18px, 2vw, 24px);
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    animation: task-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes task-glow {
+    from {
+        text-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+    }
+    to {
+        text-shadow: 0 0 15px rgba(76, 175, 80, 0.8), 0 0 20px rgba(76, 175, 80, 0.5);
+    }
+}
+
+/* タスク入力フォーム */
+.task-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.task-input {
+    flex: 1;
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.pomodoro-count {
+    width: 60px;
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    text-align: center;
+}
+
+/* タスクリスト */
+.task-list {
+    list-style-type: none;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    background-color: var(--background-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    cursor: move;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-left: 4px solid transparent;
+}
+
+.task-item:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.task-item.dragging {
+    opacity: 0.5;
+    transform: scale(1.02);
+}
+
+.task-item.active {
+    border-left: 4px solid var(--primary-color);
+    background-color: rgba(255, 99, 71, 0.1);
+    box-shadow: 0 0 12px rgba(255, 99, 71, 0.2);
+}
+
+.task-checkbox {
+    margin-right: 15px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.task-text {
+    flex: 1;
+    font-size: 16px;
+    transition: color 0.2s, text-decoration 0.2s;
+}
+
+.task-completed .task-text {
+    color: var(--completed-color);
+    text-decoration: line-through;
+}
+
+.task-drag-handle {
+    cursor: grab;
+    padding: 5px;
+    margin-right: 10px;
+    color: var(--border-color);
+}
+
+.task-pomodoro-counter {
+    display: flex;
+    align-items: center;
+    margin-right: 15px;
+    font-size: 14px;
+}
+
+.task-delete {
+    background: none;
+    border: none;
+    color: #ff0000;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    font-size: 18px;
+}
+
+.task-delete:hover {
+    opacity: 1;
+}
+
+/* タスク統計 */
+.task-stats {
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.hide-completed {
+    margin-top: 10px;
+    background: none;
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+/* 集中モード切り替え */
+.focus-mode-toggle {
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+}
+
+.focus-mode-toggle input {
+    margin-right: 8px;
+}
+
+/* 統計セクション */
+.statistics-section {
+    background-color: var(--card-background);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.statistics-section h2 {
+    font-size: clamp(18px, 2vw, 24px);
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+    animation: stats-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes stats-glow {
+    from {
+        text-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+    }
+    to {
+        text-shadow: 0 0 15px rgba(255, 193, 7, 0.8), 0 0 20px rgba(255, 193, 7, 0.5);
+    }
+}
+
+.stats-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.stat-card {
+    background-color: var(--background-color);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.stat-label {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* グラフコンテナ */
+.chart-container {
+    width: 100%;
+    height: 200px;
+    margin-top: 20px;
+}
+
+/* グラフ切り替えボタン */
+.chart-toggle {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.chart-toggle-btn {
+    padding: 5px 10px;
+    margin: 0 5px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.chart-toggle-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* レスポンシブデザイン調整 */
+@media (max-width: 767px) {
+    .container {
+        height: auto;
+    }
+    
+    .timer-section,
+    .tasks-section,
+    .statistics-section {
+        min-height: auto;
+    }
+    
+    .task-list {
+        max-height: 300px;
+    }
+}
+
+/* 集中モード */
+body.focus-mode .tasks-section,
+body.focus-mode .statistics-section {
+    display: none;
+}
+
+body.focus-mode .container {
+    grid-template-columns: 1fr;
+}
+
+body.focus-mode .timer-section {
+    height: calc(100vh - 120px);
+}
