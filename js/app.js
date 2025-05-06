@@ -830,7 +830,7 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function notifyTimerEnd() {
         // 音声通知
-        domElements.notificationSound.play();
+        //domElements.notificationSound.play();
         
         // デスクトップ通知
         showNotification();
