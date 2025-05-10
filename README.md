@@ -141,6 +141,9 @@
 [サラリーマン必見！タスク管理×時間術で効率爆上げ「FlowStateアプリ」完全ガイド](https://yourworklifedesign.blogspot.com/2025/04/flowstate.html)
 
 ## ライセンス
-
+個人の範囲でご使用ください。
+```
 Copyright (c) 2025 Daily Growth
+https://yourworklifedesign.blogspot.com/
 All rights reserved.
+```
