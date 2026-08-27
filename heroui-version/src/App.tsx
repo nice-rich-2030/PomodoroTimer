@@ -33,7 +33,7 @@ export default function App() {
   }, [completedTaskCount])
 
   return (
-    <div className="max-w-2xl mx-auto px-4">
+    <div className="min-h-screen w-full max-w-[420px] mx-auto px-5 flex flex-col gap-1">
       <Header />
       <TimerPanel timer={timer} />
       <SettingsPanel

@@ -14,6 +14,8 @@ import { Button, Card, CardBody, Input } from '@heroui/react'
 import { TASKS } from '../constants/messages'
 import type { useTasks } from '../hooks/useTasks'
 import TaskItem from './TaskItem'
+import SectionLabel from './SectionLabel'
+import { ChecklistIcon, EyeIcon, PlusIcon } from './icons'
 
 export type TasksApi = ReturnType<typeof useTasks>
 
@@ -45,34 +47,48 @@ export default function TaskList({ tasksApi }: { tasksApi: TasksApi }) {
   }
 
   return (
-    <section className="py-6">
-      <h2 className="text-xl font-semibold mb-3">{TASKS.sectionTitle}</h2>
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
+    <section className="py-4">
+      <SectionLabel icon={<ChecklistIcon width={14} height={14} strokeWidth={2} />}>
+        {TASKS.sectionTitle}
+      </SectionLabel>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 mb-3">
         <Input
+          size="sm"
           placeholder="新しいタスクを入力..."
-          className="flex-1"
           value={text}
           onValueChange={setText}
         />
-        <Input
-          type="number"
-          className="w-24"
-          value={plannedPomodoros}
-          onValueChange={setPlannedPomodoros}
-        />
-        <Button color="primary" type="submit">
-          {TASKS.addButton}
-        </Button>
+        <div className="flex gap-2">
+          <Input
+            size="sm"
+            type="number"
+            className="w-20"
+            value={plannedPomodoros}
+            onValueChange={setPlannedPomodoros}
+            aria-label="予定ポモドーロ数"
+          />
+          <Button
+            size="sm"
+            color="primary"
+            type="submit"
+            className="flex-1"
+            startContent={<PlusIcon width={16} height={16} strokeWidth={2.2} />}
+          >
+            {TASKS.addButton}
+          </Button>
+        </div>
       </form>
+
       {visibleTasks.length === 0 ? (
-        <Card>
-          <CardBody className="text-default-500 text-center py-8">
+        <Card shadow="sm" className="border border-divider/60">
+          <CardBody className="text-default-400 text-center text-sm py-6">
             {TASKS.emptyState}
           </CardBody>
         </Card>
       ) : (
-        <Card>
-          <CardBody className="py-2">
+        <Card shadow="sm" className="border border-divider/60">
+          <CardBody className="py-1 px-2">
             <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
               <SortableContext
                 items={visibleTasks.map((task) => task.id)}
@@ -93,16 +109,17 @@ export default function TaskList({ tasksApi }: { tasksApi: TasksApi }) {
           </CardBody>
         </Card>
       )}
-      <div className="mt-3 flex items-center gap-3">
+      <div className="mt-2 flex items-center justify-between">
         <Button
           variant="light"
           size="sm"
+          startContent={<EyeIcon width={15} height={15} strokeWidth={1.9} />}
           onPress={() => setHideCompleted((value) => !value)}
         >
           {TASKS.toggleCompleted}
         </Button>
-        <span className="text-sm text-default-500">
-          全タスク: {tasks.length} / 完了: {completedCount}
+        <span className="text-xs text-default-400">
+          {tasks.length}件中 {completedCount}件完了
         </span>
       </div>
     </section>
